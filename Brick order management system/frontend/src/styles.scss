@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; font-family: 'DM Sans', sans-serif; font-synthesis: none; text-rendering: optimizeLegibility; }
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body { color: #1f2925; background: #f6f7f4; font-family: 'DM Sans', sans-serif; font-size: 13px; }
+button, input, select, textarea { font: inherit; }
