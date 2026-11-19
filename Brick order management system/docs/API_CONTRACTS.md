@@ -40,9 +40,13 @@ Create/update fields: `customerCode`, `customerName`, `customerType` (`INDIVIDUA
 | `/vehicles` | list active vehicles | no vehicle CRUD endpoint yet |
 | `/payments` | paged search, collect | customer must match linked order; payment cannot exceed order balance |
 | `/settings` | get/update profile contact and plant settings | profile role remains fixed until authentication/RBAC is implemented |
+| `/invoices` | paged search by invoice number, order number, or customer name | read-only listing of rows already present in the invoices table |
+| `/reports/operations` | aggregated order, payment, delivery, production, and current inventory summary | optional ISO `from`/`to` dates; dated operational totals are range-filtered, inventory is a current snapshot |
 
 ## Not Implemented
 
-Login/refresh/logout and password recovery; role changes; order confirmation/status transitions; delivery status transitions, returns and challan PDF; customer ledger; invoice issuance/PDF/email; financial/operational reports and exports; notification sending; and audit event capture. Invoice and GST calculations need validated tax jurisdiction/company configuration before implementation.
+Login/refresh/logout and password recovery; role changes; order confirmation/status transitions; delivery status transitions, returns and challan PDF; customer ledger; invoice issuance/PDF/email; report exports; notification sending; and audit event capture. Invoice and GST calculations need validated tax jurisdiction/company configuration before implementation.
+
+The invoice endpoint does not issue invoices or generate PDFs; it only lists existing invoice records. The operations report currently includes all matching order/payment records regardless of order status, counts deliveries by creation timestamp (UTC date boundaries), and reports inventory as current balances independent of the selected date range. Confirm those reporting interpretations with business owners before using the figures for accounting or compliance.
 
 Pagination follows Spring Data page numbering (`page` starts at 0). Monetary values currently serialize as JSON numbers backed by Java `BigDecimal`; clients should avoid binary floating-point arithmetic for financial totals. OpenAPI is available at `/v3/api-docs` and Swagger UI at `/swagger-ui.html`.

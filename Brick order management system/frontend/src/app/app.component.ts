@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,7 +8,7 @@ import { SettingsApiService } from './settings-api.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, MatIconModule],
+  imports: [DatePipe, RouterLink, RouterLinkActive, RouterOutlet, MatIconModule],
   template: `
     <div class="app-frame" [class.nav-open]="menuOpen()">
       <aside class="sidebar">
@@ -39,7 +40,7 @@ import { SettingsApiService } from './settings-api.service';
           <button class="icon-button menu-button" type="button" title="Toggle navigation" aria-label="Toggle navigation" (click)="toggleMenu()"><mat-icon>menu</mat-icon></button>
           <div class="crumb"><span>Brickworks</span><mat-icon>chevron_right</mat-icon><strong>{{ activeTitle() }}</strong></div>
           <div class="top-actions">
-            <span class="today-label">Thursday, 05 November 2026</span>
+            <span class="today-label">{{ currentDate | date:'EEEE, dd MMMM yyyy' }}</span>
             <div class="notification-anchor">
               <button class="icon-button notification-button" type="button" title="Notifications" aria-label="Notifications" [attr.aria-expanded]="notificationsOpen()" (click)="toggleNotifications()"><mat-icon>notifications_none</mat-icon><i></i></button>
               @if (notificationsOpen()) {
@@ -51,7 +52,7 @@ import { SettingsApiService } from './settings-api.service';
                 </div>
               }
             </div>
-            <span class="top-avatar">{{ profileInitials() }}</span>
+            <button class="top-avatar" type="button" aria-label="Open profile settings" title="Profile settings" routerLink="/settings">{{ profileInitials() }}</button>
           </div>
         </header>
         <section class="page-content"><router-outlet /></section>
@@ -106,7 +107,9 @@ import { SettingsApiService } from './settings-api.service';
     .notification-popover .status-dot { flex:none; }
     .notification-popover a { display:flex; align-items:center; gap:5px; margin-top:12px; color:#34715c; font-size:10px; font-weight:600; text-decoration:none; }
     .notification-popover a mat-icon { width:14px; height:14px; font-size:14px; }
-    .top-avatar { width:29px; height:29px; background:#e9d4bc; }
+    .top-avatar { width:29px; height:29px; padding:0; border:0; background:#e9d4bc; cursor:pointer; }
+    .top-avatar:hover { box-shadow:0 0 0 3px #e9d4bc66; }
+    .top-avatar:focus-visible { outline:2px solid #24554b; outline-offset:3px; }
     .menu-button { display:none; }
     .page-content { max-width:1500px; margin:auto; padding:28px 36px 46px; }
     .scrim { display:none; }
@@ -115,6 +118,7 @@ import { SettingsApiService } from './settings-api.service';
   `]
 })
 export class AppComponent {
+  readonly currentDate = new Date();
   readonly menuOpen = signal(false);
   readonly notificationsOpen = signal(false);
   readonly activeTitle = signal('Overview');

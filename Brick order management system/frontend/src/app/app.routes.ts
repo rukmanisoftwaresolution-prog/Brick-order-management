@@ -46,14 +46,16 @@ export const routes: Routes = [
     loadComponent: () => import('./settings-page.component').then((module) => module.SettingsPageComponent),
     data: { breadcrumb: 'Settings', title: 'Settings' }
   },
-  ...[
-    ['invoices', 'Invoices'],
-    ['reports', 'Reports'],
-  ].map(([path, title]) => ({
-    path,
-    loadComponent: () => import('./module-page.component').then((module) => module.ModulePageComponent),
-    data: { breadcrumb: title, title }
-  })),
+  {
+    path: 'invoices',
+    loadComponent: () => import('./invoice-page.component').then((module) => module.InvoicePageComponent),
+    data: { breadcrumb: 'Invoices', title: 'Invoices' }
+  },
+  {
+    path: 'reports',
+    loadComponent: () => import('./reports-page.component').then((module) => module.ReportsPageComponent),
+    data: { breadcrumb: 'Reports', title: 'Reports' }
+  },
   {
     path: 'login',
     loadComponent: () => import('./module-page.component').then((module) => module.ModulePageComponent),
