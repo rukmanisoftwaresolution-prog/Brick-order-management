@@ -18,6 +18,8 @@ export interface DeliveryLine {
   quantity: number;
 }
 
+export type DeliveryStatus = 'PENDING' | 'LOADING' | 'IN_TRANSIT' | 'DELIVERED' | 'RETURNED';
+
 export interface Delivery {
   id: number;
   deliveryNumber: string;
@@ -25,9 +27,10 @@ export interface Delivery {
   customerName: string;
   vehicleNumber: string | null;
   driverName: string | null;
-  status: string;
+  status: DeliveryStatus;
   deliveryAddress: string;
   challanNumber: string;
+  createdAt: string;
   items: DeliveryLine[];
 }
 
@@ -39,24 +42,35 @@ export interface DeliveryRequest {
   items: { orderItemId: number; quantity: number }[];
 }
 
+export interface DeliveryStatusRequest {
+  status: DeliveryStatus;
+}
+
 export interface Payment {
   id: number;
+  customerId: number;
   customerCode: string;
   customerName: string;
   orderNumber: string | null;
   paymentDate: string;
+  createdAt: string;
   amount: number;
   paymentType: string;
   referenceNumber: string | null;
   remarks: string | null;
+  invoiceNumber: string | null;
+  paymentStatus: 'SUCCESSFUL' | 'PENDING' | 'FAILED' | 'REVERSED';
 }
 
 export interface PaymentRequest {
   customerId: number;
-  orderId: number | null;
+  orderId?: number | null;
+  invoiceId: number;
   amount: number;
-  paymentType: 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE';
+  paymentType: 'CASH' | 'UPI' | 'PHONEPE' | 'BANK_TRANSFER' | 'OTHER' | 'CHEQUE';
+  paymentDate: string;
   referenceNumber: string;
+  idempotencyKey: string;
   remarks: string;
 }
 
@@ -74,12 +88,18 @@ export class LogisticsApiService {
   createDelivery(request: DeliveryRequest): Observable<ApiResponse<Delivery>> {
     return this.http.post<ApiResponse<Delivery>>(this.deliveriesUrl, request);
   }
+  updateDeliveryStatus(id: number, status: DeliveryStatus): Observable<ApiResponse<Delivery>> {
+    return this.http.patch<ApiResponse<Delivery>>(`${this.deliveriesUrl}/${id}/status`, { status });
+  }
   vehicles(): Observable<ApiResponse<Vehicle[]>> {
     return this.http.get<ApiResponse<Vehicle[]>>(this.vehiclesUrl);
   }
   payments(): Observable<ApiResponse<PageResult<Payment>>> {
     const params = new HttpParams().set('page', 0).set('size', 50);
     return this.http.get<ApiResponse<PageResult<Payment>>>(this.paymentsUrl, { params });
+  }
+  customerPayments(customerId: number): Observable<ApiResponse<Payment[]>> {
+    return this.http.get<ApiResponse<Payment[]>>(`${this.paymentsUrl}/customer/${customerId}`);
   }
   createPayment(request: PaymentRequest): Observable<ApiResponse<Payment>> {
     return this.http.post<ApiResponse<Payment>>(this.paymentsUrl, request);

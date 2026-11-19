@@ -43,6 +43,11 @@ public class SalesOrderController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Draft order created.", service.create(request)));
     }
 
+    @PostMapping("/{id}/confirm")
+    public ResponseEntity<ApiResponse<OrderView>> confirm(@PathVariable long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Order confirmed.", service.confirm(id)));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteDraft(@PathVariable long id) {
         service.deleteDraft(id);

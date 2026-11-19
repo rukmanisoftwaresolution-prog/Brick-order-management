@@ -5,6 +5,7 @@ import com.brickworks.common.ResourceNotFoundException;
 import com.brickworks.order.SalesOrder;
 import com.brickworks.order.SalesOrderItem;
 import com.brickworks.order.SalesOrderRepository;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -74,6 +75,38 @@ public class DeliveryService {
         return toView(deliveries.save(delivery));
     }
 
+    public DeliveryView updateStatus(long id, DeliveryStatus requestedStatus) {
+        Delivery delivery = deliveries.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Delivery " + id + " was not found."));
+        DeliveryStatus currentStatus = delivery.getStatus();
+        if (!isAllowedTransition(currentStatus, requestedStatus)) {
+            if (currentStatus == DeliveryStatus.DELIVERED || currentStatus == DeliveryStatus.RETURNED) {
+                throw new ConflictException("Delivery status " + currentStatus + " is final and cannot be changed.");
+            }
+            throw new ConflictException("Delivery status cannot change from " + currentStatus + " to " + requestedStatus + ".");
+        }
+
+        if (requestedStatus == DeliveryStatus.IN_TRANSIT) {
+            delivery.setDispatchDate(Instant.now());
+        } else if (requestedStatus == DeliveryStatus.DELIVERED) {
+            delivery.setDeliveredAt(Instant.now());
+        }
+        delivery.setStatus(requestedStatus);
+        return toView(deliveries.save(delivery));
+    }
+
+    private boolean isAllowedTransition(DeliveryStatus currentStatus, DeliveryStatus requestedStatus) {
+        if (currentStatus == null || requestedStatus == null) {
+            return false;
+        }
+        return switch (currentStatus) {
+            case PENDING -> requestedStatus == DeliveryStatus.LOADING;
+            case LOADING -> requestedStatus == DeliveryStatus.IN_TRANSIT || requestedStatus == DeliveryStatus.RETURNED;
+            case IN_TRANSIT -> requestedStatus == DeliveryStatus.DELIVERED || requestedStatus == DeliveryStatus.RETURNED;
+            case DELIVERED, RETURNED -> false;
+        };
+    }
+
     private String nextDeliveryNumber() {
         String number;
         do { number = "DL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(); }
@@ -89,6 +122,6 @@ public class DeliveryService {
                 delivery.getOrder().getCustomer().getCustomerName(),
                 delivery.getVehicle() == null ? null : delivery.getVehicle().getVehicleNumber(),
                 delivery.getVehicle() == null ? null : delivery.getVehicle().getDriverName(), delivery.getStatus(),
-                delivery.getDeliveryAddress(), delivery.getChallanNumber(), null, lines);
+                delivery.getDeliveryAddress(), delivery.getChallanNumber(), delivery.getCreatedAt(), lines);
     }
 }

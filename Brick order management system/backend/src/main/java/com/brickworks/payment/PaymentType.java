@@ -4,5 +4,7 @@ public enum PaymentType {
     CASH,
     UPI,
     BANK_TRANSFER,
-    CHEQUE
+    CHEQUE,
+    PHONEPE,
+    OTHER
 }

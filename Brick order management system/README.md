@@ -6,15 +6,17 @@ A full-stack foundation for brick manufacturing, sales, production, dispatch, in
 
 This repository is an in-progress ERP, not yet production-ready. Implemented workflows currently include:
 
-- Spring Boot 3.5 / Java 21 backend, PostgreSQL, Flyway, JPA, MapStruct, OpenAPI, validation, and shared API response/error handling.
+- Spring Boot 3.5 / Java 17 backend, PostgreSQL, Flyway, JPA, MapStruct, OpenAPI, validation, and shared API response/error handling.
 - Customer CRUD/search, product CRUD API and create/list UI, and draft order create/list/delete with server-side GST totals.
 - Production entry create/list with accepted output posted to inventory; inventory list and audited receipt/damage/stocktake adjustments.
-- Delivery create/list with vehicle lookup, challan numbers, and remaining-order-quantity validation; payment create/list with customer/order checks and overpayment protection.
+- Delivery create/list with vehicle lookup, challan numbers, and remaining-order-quantity validation; confirmed-order invoice generation and invoice-linked partial payment collection with idempotency and server-calculated balances.
 - Flyway V1 schema for users/roles/permissions and customer, product, order, production, inventory, delivery, payment, invoice, notification, and audit data.
 - Angular customer, product, order, production, inventory, delivery, payment, and profile/plant settings screens connected to the dev API; responsive dashboard shell and Chart.js sample graph.
 - Docker Compose for local PostgreSQL/backend, CI build workflow, API contract, ER diagram, implementation plan, and deployment guidance.
 
-Invoices/GST PDF, operational and financial reports, login/JWT/RBAC, password recovery, order status transitions, delivery status transitions, notification sending, and audit event capture are not implemented. Settings currently stores profile/contact and plant fields; it does not manage accounts or roles. Invoice tax jurisdiction and company GST configuration need business confirmation. These pages remain informational placeholders; they do not have create buttons. Do not deploy this version with real customer, payment, or tax data.
+Invoice PDFs/email, financial report exports, login/JWT/password recovery, role-management UI, general order status transitions, delivery status transitions, configured notification sending, and audit event capture are not implemented. Sensitive payment, invoice, reminder, and order-confirmation APIs require an active user with the `ADMIN` role outside the dev profile; users and role assignments must exist in the existing `users`, `roles`, and `user_roles` tables. Settings currently stores profile/contact and plant fields; it does not manage accounts or roles.
+
+The invoice amount copies the order total. Until company tax jurisdiction is configured, generated invoices use the documented intrastate CGST/SGST split assumption. The notification provider interface is present, but no provider credentials or implementation are configured; WhatsApp/SMS reminder attempts return an explicit unavailable response. Validate these assumptions and configure a real provider before production use.
 
 Angular 18.2.20 is not published; the frontend is pinned to the final published 18.2 patch, 18.2.14. JPA repositories must use JPQL or derived query methods; do not add native SQL JPA queries. Flyway SQL is used for database schema migration only.
 
@@ -22,7 +24,7 @@ The production dependency audit currently reports 13 Angular-related advisories 
 
 ## Requirements
 
-- Java 21 and Maven 3.9+
+- Java 17 and Maven 3.9+
 - Node.js 20 and npm
 - Docker Engine with Docker Compose (optional if using a local PostgreSQL service)
 

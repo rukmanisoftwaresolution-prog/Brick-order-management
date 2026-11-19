@@ -37,6 +37,10 @@ public class Delivery {
     private String deliveryAddress;
     @Column(name = "challan_number", unique = true, length = 30)
     private String challanNumber;
+    @Column(name = "dispatch_date")
+    private Instant dispatchDate;
+    @Column(name = "delivered_at")
+    private Instant deliveredAt;
     @Column(length = 1000)
     private String remarks;
     @OneToMany(mappedBy = "delivery", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -60,6 +64,11 @@ public class Delivery {
     public void setDeliveryAddress(String value) { deliveryAddress = value; }
     public String getChallanNumber() { return challanNumber; }
     public void setChallanNumber(String value) { challanNumber = value; }
+    public Instant getDispatchDate() { return dispatchDate; }
+    public void setDispatchDate(Instant value) { dispatchDate = value; }
+    public Instant getDeliveredAt() { return deliveredAt; }
+    public void setDeliveredAt(Instant value) { deliveredAt = value; }
+    public Instant getCreatedAt() { return createdAt; }
     public String getRemarks() { return remarks; }
     public void setRemarks(String value) { remarks = value; }
     public List<DeliveryItem> getItems() { return items; }

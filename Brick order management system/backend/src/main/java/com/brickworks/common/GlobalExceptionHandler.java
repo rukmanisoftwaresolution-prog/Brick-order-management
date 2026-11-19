@@ -24,6 +24,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, exception.getMessage());
     }
 
+    @ExceptionHandler(IntegrationUnavailableException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> integrationUnavailable(IntegrationUnavailableException exception) {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> invalid(MethodArgumentNotValidException exception) {
         String message = exception.getBindingResult().getFieldErrors().stream()

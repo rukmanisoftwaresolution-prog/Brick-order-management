@@ -8,6 +8,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,5 +33,11 @@ public class DeliveryController {
     @PostMapping
     public ResponseEntity<ApiResponse<DeliveryView>> create(@Valid @RequestBody DeliveryRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Delivery created.", service.create(request)));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<DeliveryView>> updateStatus(@PathVariable long id,
+                                                                   @Valid @RequestBody DeliveryStatusRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Delivery status updated.", service.updateStatus(id, request.status())));
     }
 }

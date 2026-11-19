@@ -35,9 +35,24 @@ public class SalesOrderService {
     }
 
     @Transactional(readOnly = true)
+    public Page<OrderView> eligibleForInvoicing(Pageable pageable) {
+        return orders.findEligibleForInvoicing(pageable).map(this::toView);
+    }
+
+    @Transactional(readOnly = true)
     public OrderView get(long id) {
         return toView(orders.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order " + id + " was not found.")));
+    }
+
+    public OrderView confirm(long id) {
+        SalesOrder order = orders.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order " + id + " was not found."));
+        if (order.getStatus() != OrderStatus.DRAFT) {
+            throw new ConflictException("Only draft orders can be confirmed.");
+        }
+        order.setStatus(OrderStatus.CONFIRMED);
+        return toView(orders.save(order));
     }
 
     public OrderView create(OrderRequest request) {

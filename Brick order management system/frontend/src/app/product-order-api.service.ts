@@ -82,6 +82,10 @@ export class ProductOrderApiService {
     return this.http.post<ApiResponse<SalesOrder>>(this.ordersUrl, request);
   }
 
+  confirmOrder(id: number): Observable<ApiResponse<SalesOrder>> {
+    return this.http.post<ApiResponse<SalesOrder>>(`${this.ordersUrl}/${id}/confirm`, {});
+  }
+
   deleteDraft(id: number): Observable<ApiResponse<void>> {
     return this.http.delete<ApiResponse<void>>(`${this.ordersUrl}/${id}`);
   }

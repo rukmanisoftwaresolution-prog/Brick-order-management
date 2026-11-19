@@ -13,6 +13,11 @@ public record InvoiceView(
         BigDecimal cgst,
         BigDecimal sgst,
         BigDecimal igst,
-        BigDecimal invoiceAmount
+        BigDecimal invoiceAmount,
+        Long orderId,
+        Long customerId,
+        BigDecimal paidAmount,
+        BigDecimal outstandingAmount,
+        InvoiceSettlementStatus paymentStatus
 ) {
 }

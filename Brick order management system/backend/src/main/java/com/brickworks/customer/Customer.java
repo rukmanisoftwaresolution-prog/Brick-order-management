@@ -91,6 +91,11 @@ public class Customer {
     @Column(name = "outstanding_amount", nullable = false, precision = 14, scale = 2)
     private BigDecimal outstandingAmount = BigDecimal.ZERO;
 
+    @NotNull
+    @PositiveOrZero
+    @Column(name = "legacy_outstanding_amount", nullable = false, precision = 14, scale = 2)
+    private BigDecimal legacyOutstandingAmount = BigDecimal.ZERO;
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -140,6 +145,8 @@ public class Customer {
     public void setCreditLimit(BigDecimal creditLimit) { this.creditLimit = creditLimit; }
     public BigDecimal getOutstandingAmount() { return outstandingAmount; }
     public void setOutstandingAmount(BigDecimal outstandingAmount) { this.outstandingAmount = outstandingAmount; }
+    public BigDecimal getLegacyOutstandingAmount() { return legacyOutstandingAmount; }
+    public void setLegacyOutstandingAmount(BigDecimal legacyOutstandingAmount) { this.legacyOutstandingAmount = legacyOutstandingAmount; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
     public Instant getCreatedAt() { return createdAt; }
