@@ -5,11 +5,13 @@ import { Invoice, InvoiceApiService } from './invoice-api.service';
 import { LogisticsApiService, Payment, PaymentRequest } from './logistics-api.service';
 import { PaymentPageComponent } from './payment-page.component';
 import { CustomerApiService } from './customer-api.service';
+import { PaymentStatementPdfService } from './payment-statement-pdf.service';
 
 describe('PaymentPageComponent', () => {
   let fixture: ComponentFixture<PaymentPageComponent>;
   let invoiceApi: jasmine.SpyObj<InvoiceApiService>;
   let logisticsApi: jasmine.SpyObj<LogisticsApiService>;
+  let paymentStatementPdfApi: jasmine.SpyObj<PaymentStatementPdfService>;
 
   const customer: Customer = {
     id: 5,
@@ -65,9 +67,11 @@ describe('PaymentPageComponent', () => {
   beforeEach(async () => {
     invoiceApi = jasmine.createSpyObj<InvoiceApiService>('InvoiceApiService', ['openForCustomer']);
     logisticsApi = jasmine.createSpyObj<LogisticsApiService>('LogisticsApiService', ['payments', 'customerPayments', 'createPayment']);
+    paymentStatementPdfApi = jasmine.createSpyObj<PaymentStatementPdfService>('PaymentStatementPdfService', ['download']);
     invoiceApi.openForCustomer.and.returnValue(of(responseWith([invoice])));
     logisticsApi.payments.and.returnValue(of(responseWithPayments([payment])));
     logisticsApi.customerPayments.and.returnValue(of(responseWithHistory([])));
+    paymentStatementPdfApi.download.and.returnValue(Promise.resolve());
     logisticsApi.createPayment.and.returnValue(of({
       success: true,
       message: 'Payment recorded.',
@@ -80,7 +84,8 @@ describe('PaymentPageComponent', () => {
       providers: [
         { provide: CustomerApiService, useValue: { list: () => of(responseWithCustomers([customer])) } },
         { provide: InvoiceApiService, useValue: invoiceApi },
-        { provide: LogisticsApiService, useValue: logisticsApi }
+        { provide: LogisticsApiService, useValue: logisticsApi },
+        { provide: PaymentStatementPdfService, useValue: paymentStatementPdfApi }
       ]
     }).compileComponents();
 
@@ -152,6 +157,43 @@ describe('PaymentPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('09:00:00 AM');
     expect(fixture.componentInstance.statementTotalReceived()).toBe(1700);
     expect(fixture.nativeElement.textContent).toContain('Close');
+  });
+
+  it('downloads the loaded statement for the selected customer and disables repeated clicks while generating', async () => {
+    let finishDownload!: () => void;
+    paymentStatementPdfApi.download.and.returnValue(new Promise<void>((resolve) => { finishDownload = resolve; }));
+    logisticsApi.customerPayments.and.returnValue(of(responseWithHistory([payment])));
+    fixture.nativeElement.querySelector('.customer-link').click();
+    fixture.detectChanges();
+
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('.statement-dialog button.primary-action');
+    expect(button.textContent).toContain('Download PDF');
+    button.click();
+    fixture.detectChanges();
+
+    expect(paymentStatementPdfApi.download).toHaveBeenCalledWith(payment, [payment], customer);
+    expect(button.disabled).toBeTrue();
+    expect(button.textContent).toContain('Generating PDF...');
+    button.click();
+    expect(paymentStatementPdfApi.download).toHaveBeenCalledTimes(1);
+
+    finishDownload();
+    await Promise.resolve();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.statementPdfLoading()).toBeFalse();
+  });
+
+  it('shows a meaningful error when PDF generation fails', async () => {
+    logisticsApi.customerPayments.and.returnValue(of(responseWithHistory([payment])));
+    paymentStatementPdfApi.download.and.returnValue(Promise.reject(new Error('PDF generation failed')));
+    fixture.nativeElement.querySelector('.customer-link').click();
+    fixture.detectChanges();
+
+    await fixture.componentInstance.downloadStatementPdf();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Could not generate or download the payment statement PDF.');
+    expect(fixture.componentInstance.statementPdfLoading()).toBeFalse();
   });
 
   it('shows an empty state and reloads customer history when opened again', () => {

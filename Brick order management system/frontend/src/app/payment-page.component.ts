@@ -8,6 +8,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Customer, CustomerApiService } from './customer-api.service';
 import { LogisticsApiService, Payment, PaymentRequest } from './logistics-api.service';
 import { Invoice, InvoiceApiService } from './invoice-api.service';
+import { PaymentStatementPdfService } from './payment-statement-pdf.service';
 
 @Component({
   standalone: true,
@@ -20,13 +21,14 @@ import { Invoice, InvoiceApiService } from './invoice-api.service';
       <section class="table-panel">@if (loading()) { <p class="empty">Loading payments...</p> } @else if (payments().length === 0) { <p class="empty">No payments recorded.</p> } @else { <div class="table-scroll"><table><thead><tr><th>DATE</th><th>CUSTOMER</th><th>INVOICE / ORDER</th><th>METHOD</th><th>STATUS</th><th>REFERENCE</th><th>AMOUNT</th></tr></thead><tbody>@for (payment of payments(); track payment.id) { <tr><td>{{ payment.paymentDate | date:'dd MMM yyyy' }}</td><td><button class="customer-link" type="button" (click)="openStatement(payment)">{{ payment.customerName }}</button><small>{{ payment.customerCode }}</small></td><td>{{ payment.invoiceNumber || payment.orderNumber || 'Advance' }}</td><td>{{ payment.paymentType.replace('_', ' ') }}</td><td>{{ payment.paymentStatus }}</td><td>{{ payment.referenceNumber || '—' }}</td><td class="money">{{ payment.amount | currency:'INR':'symbol':'1.2-2' }}</td></tr> }</tbody></table></div> }</section>
       @if (statementOpen()) { <div class="backdrop" (click)="closeStatement()"><section class="dialog statement-dialog" role="dialog" aria-modal="true" aria-labelledby="statement-title" (click)="$event.stopPropagation()"><header><div><p class="eyebrow">CUSTOMER ACCOUNT</p><h2 id="statement-title">Payment Statement</h2>@if (statementCustomer(); as customer) { <p class="statement-customer">{{ customer.customerName }} <small>{{ customer.customerCode }}</small></p> }</div><button class="close" type="button" aria-label="Close payment statement" (click)="closeStatement()"><mat-icon>close</mat-icon></button></header>
         @if (statementError()) { <p class="feedback error" role="alert">{{ statementError() }}</p> }
+        @if (statementPdfError()) { <p class="feedback error" role="alert">{{ statementPdfError() }}</p> }
         @if (statementLoading()) { <p class="empty">Loading payment history...</p> }
         @else if (!statementError()) {
           <div class="statement-summary"><article><span>Transactions</span><strong>{{ statementPayments().length }}</strong></article><article><span>Successful payments received</span><strong>{{ statementTotalReceived() | currency:'INR':'symbol':'1.2-2' }}</strong></article></div>
           @if (statementPayments().length === 0) { <p class="empty">No payment history for this customer.</p> }
           @else { <div class="table-scroll"><table class="statement-table"><thead><tr><th>PAYMENT DATE</th><th>INVOICE / ADVANCE</th><th>ORDER</th><th>METHOD</th><th>REFERENCE</th><th>STATUS</th><th>AMOUNT</th></tr></thead><tbody>@for (payment of statementPayments(); track payment.id) { <tr><td>{{ payment.paymentDate | date:'dd MMM yyyy' }}<small>{{ payment.createdAt | date:'dd MMM yyyy, hh:mm:ss a':'+0530' }} IST</small></td><td>{{ payment.invoiceNumber || 'Advance payment' }}</td><td>{{ payment.orderNumber || '—' }}</td><td>{{ payment.paymentType.replace('_', ' ') }}</td><td>{{ payment.referenceNumber || '—' }}</td><td>{{ payment.paymentStatus }}</td><td class="money">{{ payment.amount | currency:'INR':'symbol':'1.2-2' }}</td></tr> }</tbody></table></div> }
         }
-        <footer><button class="secondary-action" type="button" (click)="closeStatement()">Close</button></footer>
+        <footer><button class="secondary-action" type="button" (click)="closeStatement()">Close</button>@if (!statementLoading() && !statementError()) { <button class="primary-action" type="button" (click)="downloadStatementPdf()" [disabled]="statementPdfLoading()"><mat-icon>download</mat-icon>{{ statementPdfLoading() ? 'Generating PDF...' : 'Download PDF' }}</button> }</footer>
       </section></div> }
       @if (formOpen()) { <div class="backdrop" (click)="formOpen.set(false)"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="payment-title" (click)="$event.stopPropagation()"><header><div><p class="eyebrow">RECEIPT ENTRY</p><h2 id="payment-title">Record payment</h2></div><button class="close" type="button" aria-label="Close" (click)="formOpen.set(false)"><mat-icon>close</mat-icon></button></header>
         @if (formError()) { <p class="feedback error" role="alert">{{ formError() }}</p> }
@@ -51,6 +53,7 @@ export class PaymentPageComponent implements OnInit {
   private readonly api = inject(LogisticsApiService);
   private readonly customerApi = inject(CustomerApiService);
   private readonly invoiceApi = inject(InvoiceApiService);
+  private readonly statementPdfApi = inject(PaymentStatementPdfService);
   private readonly fb = inject(FormBuilder);
   private readonly invoiceRequests = new Subject<number>();
   private readonly statementRequests = new Subject<number>();
@@ -66,6 +69,8 @@ export class PaymentPageComponent implements OnInit {
   readonly statementOpen = signal(false);
   readonly statementLoading = signal(false);
   readonly statementError = signal('');
+  readonly statementPdfError = signal('');
+  readonly statementPdfLoading = signal(false);
   readonly error = signal('');
   readonly formError = signal('');
   readonly message = signal('');
@@ -87,6 +92,7 @@ export class PaymentPageComponent implements OnInit {
   });
   private requestFingerprint = '';
   private idempotencyKey = '';
+  private statementRequestId = 0;
 
   constructor() {
     this.invoiceRequests.pipe(
@@ -140,16 +146,39 @@ export class PaymentPageComponent implements OnInit {
   }
 
   openStatement(payment: Payment): void {
+    this.statementRequestId++;
     this.statementCustomer.set(payment);
     this.statementPayments.set([]);
     this.statementError.set('');
+    this.statementPdfError.set('');
+    this.statementPdfLoading.set(false);
     this.statementLoading.set(true);
     this.statementOpen.set(true);
     this.statementRequests.next(payment.customerId);
   }
 
   closeStatement(): void {
+    this.statementRequestId++;
     this.statementOpen.set(false);
+  }
+
+  async downloadStatementPdf(): Promise<void> {
+    const selectedCustomer = this.statementCustomer();
+    if (!selectedCustomer || this.statementLoading() || this.statementPdfLoading()) return;
+
+    const requestId = this.statementRequestId;
+    this.statementPdfError.set('');
+    this.statementPdfLoading.set(true);
+    try {
+      const customer = this.customers().find((item) => item.id === selectedCustomer.customerId);
+      await this.statementPdfApi.download(selectedCustomer, this.statementPayments(), customer);
+    } catch {
+      if (requestId === this.statementRequestId) {
+        this.statementPdfError.set('Could not generate or download the payment statement PDF. Please try again.');
+      }
+    } finally {
+      if (requestId === this.statementRequestId) this.statementPdfLoading.set(false);
+    }
   }
 
   customerChanged(): void {
